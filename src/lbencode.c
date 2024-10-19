@@ -251,6 +251,10 @@ checktable(lua_State *L, int idx)
 static int
 lencode_list(lua_State *L, int idx, sds *r)
 {
+    if (!lua_checkstack(L, 1))
+    {
+        return -1;
+    }
     sds newsds = sdscat(*r, "l");
     if (newsds == NULL)
     {
@@ -279,6 +283,10 @@ lencode_list(lua_State *L, int idx, sds *r)
 static int
 lencode_dict(lua_State *L, int idx, sds *r)
 {
+    if (!lua_checkstack(L, 2))
+    {
+        return -1;
+    }
     sds newsds = sdscat(*r, "d");
     if (newsds == NULL)
     {
@@ -316,28 +324,43 @@ lencode_any(lua_State *L, int idx, sds *r)
     {
         case LUA_TNUMBER:
         {
-            lencode_int(L, idx, r);
+            if(lencode_int(L, idx, r)==-1)
+            {
+                return -1;
+            }
             break;
         }
         case LUA_TBOOLEAN:
         {
-            lencode_bool(L, idx, r);
+            if(lencode_bool(L, idx, r)==-1)
+            {
+                return -1;
+            }
             break;
         }
         case LUA_TSTRING:
         {
-            lencode_string(L, idx, r);
+            if(lencode_string(L, idx, r)==-1)
+            {
+                return -1;
+            }
             break;
         }
         case LUA_TTABLE:
         {
             if (checktable(L, idx)) /* is dict */
             {
-                lencode_dict(L, idx, r);
+                if(lencode_dict(L, idx, r)==-1)
+                {
+                    return -1;
+                }
             }
             else
             {
-                lencode_list(L, idx, r);
+                if(lencode_list(L, idx, r)==-1)
+                {
+                    return -1;
+                }
             }
             break;
         }
@@ -360,7 +383,10 @@ ldumps(lua_State *L)
     {
         return luaL_error(L, "unable to create sds");
     }
-    lencode_any(L, 1, &ret);
+    if(lencode_any(L, 1, &ret)==-1)
+    {
+        return luaL_error(L, "memory error");
+    }
     lua_pushlstring(L, ret, sdslen(ret));
     sdsfree(ret);
     return 1;
