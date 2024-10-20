@@ -235,15 +235,18 @@ lencode_string(lua_State *L, int idx, sds *r)
 static int
 checktable(lua_State *L, int idx)
 {
+    int oldtop = lua_gettop(L);
     lua_pushnil(L);
     while (lua_next(L, idx) != 0)
     {
         if (lua_type(L, -2) != LUA_TNUMBER) /* check key */
         {
+            lua_settop(L, oldtop); /* stack balance */
             return 1;
         }
         lua_pop(L, 1);
     }
+    lua_settop(L, oldtop); /* stack balance */
     return 0;
 }
 
@@ -251,6 +254,9 @@ checktable(lua_State *L, int idx)
 static int
 lencode_list(lua_State *L, int idx, sds *r)
 {
+#ifdef DEBUG
+    fprintf(stderr, "stack size before lencode_list: %ld\n", lua_gettop(L));
+#endif
     if (!lua_checkstack(L, 1))
     {
         return -1;
@@ -277,12 +283,18 @@ lencode_list(lua_State *L, int idx, sds *r)
         return -1;
     }
     *r = newsds;
+#ifdef DEBUG
+    fprintf(stderr, "stack size after lencode_list: %ld\n", lua_gettop(L));
+#endif
     return 0;
 }
 
 static int
 lencode_dict(lua_State *L, int idx, sds *r)
 {
+#ifdef DEBUG
+    fprintf(stderr, "stack size before lencode_dict: %ld\n", lua_gettop(L));
+#endif
     if (!lua_checkstack(L, 2))
     {
         return -1;
@@ -314,6 +326,9 @@ lencode_dict(lua_State *L, int idx, sds *r)
         return -1;
     }
     *r = newsds;
+#ifdef DEBUG
+    fprintf(stderr, "stack size after lencode_dict: %ld\n", lua_gettop(L));
+#endif
     return 0;
 }
 

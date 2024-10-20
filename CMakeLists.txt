@@ -10,3 +10,4 @@ link_directories("D:\\conda\\envs\\py310\\Library\\lib" D:\\conda\\envs\\py310\\
 add_library(bencode SHARED src/lbencode.c src/util.c src/sds.c)
 target_link_libraries(bencode lua)
 set_target_properties(bencode PROPERTIES PREFIX "")
+#add_compile_definitions(DEBUG=1)
