@@ -18,19 +18,23 @@ size_t bytes_index(const char *data, int c, size_t offset)
 }
 
 static int
-ldecode_any(lua_State *L, const char *buf, size_t *offset);
+ldecode_any(lua_State *L, const char *buf, size_t bufsize, size_t *offset);
 
 static int
 lencode_any(lua_State *L, int idx, sds *r);
 
 static int
-ldecode_string(lua_State *L, const char *buf, size_t *offset)  /* 6:string */
+ldecode_string(lua_State *L, const char *buf, size_t bufsize, size_t *offset)  /* 6:string */
 {
     if (!lua_checkstack(L, 1))
     {
         return -1;
     }
     size_t colon = bytes_index(buf, 58, *offset);
+    if(colon >= bufsize) /* prevent from ptr cross bound */
+    {
+        return -1;
+    }
     int64_t length = 0;
     CM_Atoi((char *) buf + *offset, (int) colon - *offset, &length);
     if (buf[offset[0]] == 48 && colon != offset[0] + 1)
@@ -44,7 +48,7 @@ ldecode_string(lua_State *L, const char *buf, size_t *offset)  /* 6:string */
 }
 
 static int
-ldecode_int(lua_State *L, const char *buf, size_t *offset)  /* i-42e */
+ldecode_int(lua_State *L, const char *buf, size_t bufsize, size_t *offset)  /* i-42e */
 {
     if (!lua_checkstack(L, 1))
     {
@@ -52,6 +56,10 @@ ldecode_int(lua_State *L, const char *buf, size_t *offset)  /* i-42e */
     }
     *offset += 1;
     size_t end = bytes_index(buf, 101, *offset);
+    if(end >= bufsize) /* prevent from ptr cross bound */
+    {
+        return -1;
+    }
     int64_t n = 0;
     CM_Atoi((char *) buf + *offset, (int) end - *offset, &n);
     if (buf[*offset] == 45) /* - */
@@ -72,7 +80,7 @@ ldecode_int(lua_State *L, const char *buf, size_t *offset)  /* i-42e */
 
 
 static int
-ldecode_list(lua_State *L, const char *buf, size_t *offset)
+ldecode_list(lua_State *L, const char *buf, size_t bufsize, size_t *offset)
 {
     if (!lua_checkstack(L, 2))
     {
@@ -83,7 +91,7 @@ ldecode_list(lua_State *L, const char *buf, size_t *offset)
     lua_Integer count = 1; /* lua array starts with 1 */
     while (buf[*offset] != 101)  /* e */
     {
-        if (ldecode_any(L, buf, offset) == -1) /*table value*/
+        if (ldecode_any(L, buf, bufsize, offset) == -1) /*table value*/
         {
             return -1;
         }
@@ -95,7 +103,7 @@ ldecode_list(lua_State *L, const char *buf, size_t *offset)
 }
 
 static int
-ldecode_dict(lua_State *L, const char *buf, size_t *offset)
+ldecode_dict(lua_State *L, const char *buf, size_t bufsize, size_t *offset)
 {
     if (!lua_checkstack(L, 3))
     {
@@ -105,11 +113,11 @@ ldecode_dict(lua_State *L, const char *buf, size_t *offset)
     lua_createtable(L, 0, 1);  /* table */
     while (buf[*offset] != 101)
     {
-        if (ldecode_string(L, buf, offset) == -1)  /* table  string */
+        if (ldecode_string(L, buf, bufsize, offset) == -1)  /* table  string */
         {
             return -1;
         }
-        if (ldecode_any(L, buf, offset) == -1)  /* table  string  value */
+        if (ldecode_any(L, buf, bufsize, offset) == -1)  /* table  string  value */
         {
             return -1;
         }
@@ -120,13 +128,13 @@ ldecode_dict(lua_State *L, const char *buf, size_t *offset)
 }
 
 static int
-ldecode_any(lua_State *L, const char *buf, size_t *offset)
+ldecode_any(lua_State *L, const char *buf, size_t bufsize, size_t *offset)
 {
     switch (buf[*offset])
     {
         case 108: /* l */
         {
-            if (ldecode_list(L, buf, offset) == -1)
+            if (ldecode_list(L, buf, bufsize, offset) == -1)
             {
                 return -1;
             }
@@ -134,7 +142,7 @@ ldecode_any(lua_State *L, const char *buf, size_t *offset)
         }
         case 100:
         {
-            if (ldecode_dict(L, buf, offset) == -1)
+            if (ldecode_dict(L, buf, bufsize, offset) == -1)
             {
                 return -1;
             }
@@ -142,7 +150,7 @@ ldecode_any(lua_State *L, const char *buf, size_t *offset)
         }
         case 105:
         {
-            if (ldecode_int(L, buf, offset) == -1)
+            if (ldecode_int(L, buf, bufsize, offset) == -1)
             {
                 return -1;
             }
@@ -152,7 +160,7 @@ ldecode_any(lua_State *L, const char *buf, size_t *offset)
         {
             if (buf[*offset] >= 48 && buf[*offset] <= 57) /* 0-9 for string prefix */
             {
-                if (ldecode_string(L, buf, offset) == -1)
+                if (ldecode_string(L, buf, bufsize, offset) == -1)
                 {
                     return -1;
                 }
@@ -171,7 +179,7 @@ lloads(lua_State *L)
     }
     size_t size, offset = 0;
     const char *buff = luaL_checklstring(L, 1, &size);
-    if (ldecode_any(L, buff, &offset) == -1)
+    if (ldecode_any(L, buff, size, &offset) == -1)
     {
         return luaL_error(L, "not a valid bencoded string");
     }
