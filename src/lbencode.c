@@ -80,7 +80,7 @@ ldecode_list(lua_State *L, const char *buf, size_t *offset)
     }
     *offset += 1;  /* buf[*offset]==108 */
     lua_createtable(L, 1, 0);  /* table */
-    lua_Integer count = 0;
+    lua_Integer count = 1; /* lua array starts with 1 */
     while (buf[*offset] != 101)  /* e */
     {
         if (ldecode_any(L, buf, offset) == -1) /*table value*/
@@ -268,9 +268,9 @@ lencode_list(lua_State *L, int idx, sds *r)
     }
     *r = newsds;
     lua_Unsigned tbsize = lua_rawlen(L, idx);
-    for (lua_Unsigned i = 0; i < tbsize; i++)
+    for (lua_Unsigned i = 1; i <= tbsize; i++)
     {
-        lua_rawgeti(L, idx, (lua_Integer) i + 1);
+        lua_rawgeti(L, idx, (lua_Integer) i);
         if (lencode_any(L, lua_gettop(L), r) == -1) /*do not use negative idx here, push on stack will change that*/
         {
             return -1;
