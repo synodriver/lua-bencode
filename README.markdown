@@ -24,5 +24,5 @@ end
 print(pcall(bencode.loads, "i00e"))
 
 print(bencode.dumps({1,2,3, "3141"}))
-print(bencode.dumps({["123"]="ddsaf", ["1243"]=12}))
+print(bencode.dumps({["123"]="ddsaf", ["1243"]=12}, 100000))
 ```

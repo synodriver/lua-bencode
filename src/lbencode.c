@@ -397,18 +397,30 @@ lencode_any(lua_State *L, int idx, sds *r)
 static int
 ldumps(lua_State *L)
 {
-    if(lua_gettop(L)!=1)
+    int argc = lua_gettop(L);
+    if(argc>2)
     {
-        return luaL_error(L, "dumps only need 1 arg.");
+        return luaL_error(L, "dumps only need data and optional bufsize");
     }
     sds ret = sdsempty();
-    if(ret==NULL)
+    if(ret == NULL)
     {
-        return luaL_error(L, "unable to create sds");
+        return luaL_error(L, "failed to alloc buffer");
+    }
+    lua_Integer bufsize = 100000;
+    if(argc == 2)
+    {
+        bufsize = luaL_checkinteger(L, 2);
+
+    }
+    ret = sdsMakeRoomFor(ret, bufsize);
+    if(ret == NULL)
+    {
+        return luaL_error(L, "failed to append buffer");
     }
     if(lencode_any(L, 1, &ret)==-1)
     {
-        return luaL_error(L, "memory error");
+        return luaL_error(L, "memory error or invalid input");
     }
     lua_pushlstring(L, ret, sdslen(ret));
     sdsfree(ret);
