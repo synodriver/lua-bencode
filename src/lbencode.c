@@ -61,7 +61,7 @@ ldecode_int(lua_State *L, const char *buf, size_t bufsize, size_t *offset)  /* i
         return -1;
     }
     int64_t n = 0;
-    CM_Atoi((char *) buf + *offset, (int) end - *offset, &n);
+    CM_Atoi((char *) buf + *offset, (int) (end - *offset), &n);
     if (buf[*offset] == 45) /* - */
     {
         if (buf[*offset + 1] == 48) /* 0 */
@@ -221,16 +221,17 @@ lencode_string(lua_State *L, int idx, sds *r)
 {
     size_t size;
     const char *data = luaL_checklstring(L, idx, &size);
-    sds newsds = sdsMakeRoomFor(*r, size + 30);
+    sds newsds = sdscatprintf(*r, "%lld:", size);
+    if (newsds == NULL)
+    {
+        return -1;
+    }
+    newsds = sdscatlen(newsds, data, size);
     if (newsds == NULL)
     {
         return -1;
     }
     *r = newsds;
-    int count = snprintf(newsds + sdslen(newsds), size + 30, "%lld:", size);
-    sdsIncrLen(newsds, count);
-    memcpy(newsds + sdslen(newsds), data, size);
-    sdsIncrLen(newsds, (int) size);
     return 0;
 }
 
