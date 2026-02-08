@@ -194,14 +194,12 @@ static int
 lencode_int(lua_State *L, int idx, sds *r)
 {
     int64_t data = (int64_t) luaL_checkinteger(L, idx);
-    sds newsds = sdsMakeRoomFor(*r, 20);
+    sds newsds = sdscatprintf(*r, "i%llde", data);
     if (newsds == NULL)
     {
         return -1;
     }
     *r = newsds;
-    int count = snprintf(newsds + sdslen(newsds), 20, "i%llde", data);
-    sdsIncrLen(newsds, count);
     return 0;
 }
 
@@ -209,14 +207,12 @@ static int
 lencode_bool(lua_State *L, int idx, sds *r)
 {
     int data = lua_toboolean(L, idx);
-    sds newsds = sdsMakeRoomFor(*r, 8);
+    sds newsds = sdscatprintf(*r, "i%lde", data);
     if (newsds == NULL)
     {
         return -1;
     }
     *r = newsds;
-    int count = snprintf(newsds + sdslen(newsds), 8, "i%lde", data);
-    sdsIncrLen(newsds, count);
     return 0;
 }
 
@@ -231,8 +227,7 @@ lencode_string(lua_State *L, int idx, sds *r)
         return -1;
     }
     *r = newsds;
-    int count;
-    count = snprintf(newsds + sdslen(newsds), size + 30, "%lld:", size);
+    int count = snprintf(newsds + sdslen(newsds), size + 30, "%lld:", size);
     sdsIncrLen(newsds, count);
     memcpy(newsds + sdslen(newsds), data, size);
     sdsIncrLen(newsds, (int) size);
