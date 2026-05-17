@@ -3,7 +3,7 @@ project(lua_bencode C)
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(E:\\pyproject\\Lua_5.4_WinBuild\\lua-5.4.8\\src)
+include_directories(E:\\pyproject\\Lua_5.4_WinBuild\\lua-5.5.0\\src)
 link_directories(E:\\pyproject\\Lua_5.4_WinBuild\\cmake-build-release)
 
 
